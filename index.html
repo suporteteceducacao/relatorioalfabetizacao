@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduAnalytics Pro - Gestão de Alfabetização</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <style>
+        :root {
+            --brand-primary: #0f172a;
+            --brand-accent: #3b82f6;
+            --success: #10b981;
+            --card-bg: #ffffff;
+        }
+
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; overflow: hidden; }
+
+        #main-container { display: flex; height: 100vh; width: 100vw; }
+        
+        #sidebar { 
+            min-width: 280px; max-width: 280px; background: var(--brand-primary); 
+            color: white; display: flex; flex-direction: column; transition: all 0.3s;
+        }
+        #sidebar.collapsed { margin-left: -280px; }
+        
+        #content { flex-grow: 1; overflow-y: auto; padding: 2rem; position: relative; transition: all 0.3s; }
+
+        .filter-group { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
+        .form-select-custom { background-color: #1e293b !important; color: white !important; border: 1px solid #334155 !important; font-weight: 600; padding: 10px; }
+
+        .kpi-card { border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.5rem; background: var(--card-bg); height: 100%; }
+        .kpi-title { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+        .kpi-value { font-size: 1.75rem; font-weight: 800; margin-top: 0.5rem; }
+
+        .nav-pills .nav-link { color: #64748b; font-weight: 600; border-radius: 10px; margin-right: 10px; }
+        .nav-pills .nav-link.active { background-color: var(--brand-accent); color: white; }
+
+        .chart-container { position: relative; height: 400px; width: 100%; }
+        
+        .trend-pill { padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
+        .bg-up { background: #dcfce7; color: #166534; }
+        .bg-down { background: #fee2e2; color: #991b1b; }
+        .bg-stable { background: #e0f2fe; color: #0369a1; }
+
+        #reportPreview { background: white; padding: 30px; color: black; }
+        .report-header { border-bottom: 2px solid #0f172a; margin-bottom: 20px; padding-bottom: 10px; }
+
+        footer { padding: 20px; text-align: center; font-size: 0.8rem; color: #94a3b8; border-top: 1px solid #e2e8f0; margin-top: 40px; }
+    </style>
+</head>
+<body>
+
+<div id="main-container">
+    <aside id="sidebar">
+        <div class="p-4 border-bottom border-secondary text-center">
+            <h4 class="fw-bold mb-0">EDU<span class="text-primary">ANALYTICS</span></h4>
+        </div>
+        <div class="p-4 flex-grow-1">
+            <div class="filter-group mb-4">
+                <label class="small fw-bold mb-2 text-primary">SELECIONAR UNIDADE</label>
+                <select id="filterEscola" class="form-select form-select-custom shadow-none"></select>
+            </div>
+
+            <label class="small fw-bold mb-2 text-muted">BASE DE DADOS</label>
+            <div class="text-white-50 small mb-4"><i class="bi bi-database-check me-2"></i>Conectado: Planilha_Alfabetização</div>
+
+            <button class="btn btn-primary w-100 fw-bold mt-4 py-2" onclick="showReportModal()">
+                <i class="bi bi-file-earmark-bar-graph me-2"></i>Relatório Executivo
+            </button>
+        </div>
+        <div class="p-4 border-top border-secondary text-center">
+            <small class="text-muted d-block mb-2">Monitoramento de Séries Históricas</small>
+        </div>
+    </aside>
+
+    <main id="content">
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <div class="d-flex align-items-center">
+                <button id="toggleSidebar" class="btn btn-light shadow-sm me-3 border">
+                    <i class="bi bi-list fs-5"></i>
+                </button>
+                <h2 class="fw-bold m-0">Análise de Performance Educacional</h2>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-5" id="kpi-row" style="display: none;">
+            <div class="col-md-3">
+                <div class="kpi-card shadow-sm">
+                    <div class="kpi-title">Média Geral Escola</div>
+                    <div id="kpi-media" class="kpi-value text-primary">0%</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="kpi-card shadow-sm">
+                    <div class="kpi-title">Total de Turmas</div>
+                    <div id="kpi-turmas" class="kpi-value">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="kpi-card shadow-sm">
+                    <div class="kpi-title">Variação Última Edição</div>
+                    <div id="kpi-growth" class="kpi-value">--</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="kpi-card shadow-sm">
+                    <div class="kpi-title">Turmas na Meta (>=90%)</div>
+                    <div id="kpi-meta" class="kpi-value text-success">0</div>
+                </div>
+            </div>
+        </div>
+
+        <ul class="nav nav-pills mb-4">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-escolas">Visão por Edição</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-evolucao">Histórico de Variação</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-stats">Estatísticas Comparativas</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-meta">Relatório de Excelência</button></li>
+        </ul>
+
+        <div class="tab-content" id="master-report">
+            <div class="tab-pane fade show active" id="tab-escolas">
+                <div class="card p-4 border-0 shadow-sm">
+                    <h5 class="fw-bold mb-4">Média Percentual por Ano (Edição)</h5>
+                    <div class="chart-container">
+                        <canvas id="chartEscolas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="tab-evolucao">
+                <div class="card p-4 border-0 shadow-sm">
+                    <h5 class="fw-bold mb-4">Análise Ano a Ano (Crescimento/Queda)</h5>
+                    <div class="table-responsive">
+                        <table class="table table-borderless align-middle">
+                            <thead class="text-muted small fw-bold">
+                                <tr>
+                                    <th>PERÍODO COMPARADO</th>
+                                    <th>MÉDIA INICIAL</th>
+                                    <th>MÉDIA FINAL</th>
+                                    <th>VARIAÇÃO ABSOLUTA</th>
+                                    <th>STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listEvolucao"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="tab-stats">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="card p-4 border-0 shadow-sm">
+                            <h5 class="fw-bold mb-3">Resumo por Edição (Ordem Decrescente)</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm small">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Ano</th>
+                                            <th>Turmas na Meta</th>
+                                            <th>Menor Média</th>
+                                            <th>Maior Média</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tableStatsAnual"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card p-4 border-0 shadow-sm">
+                            <h5 class="fw-bold mb-3">Distribuição Geral da Unidade</h5>
+                            <div id="statsGeralBox"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="tab-meta">
+                <div class="card p-4 border-0 shadow-sm">
+                    <h5 class="fw-bold text-success mb-4">Detalhamento das Turmas de Alta Performance</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Unidade</th>
+                                    <th>Turma</th>
+                                    <th>Edição</th>
+                                    <th class="text-center">Resultado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableMeta90"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>Painel Gerencial de Educação &copy; 2026 - Alta Fidelidade Técnica</footer>
+    </main>
+</div>
+
+<div class="modal fade" id="modalReport" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">Pré-visualização do Relatório Consolidado</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light" style="max-height: 70vh; overflow-y: auto;">
+                <div id="reportPreview"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-danger px-4 fw-bold" onclick="downloadConsolidatedPDF()">
+                    <i class="bi bi-download me-2"></i>Baixar Relatório Completo (PDF)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script>
+    Chart.register(ChartDataLabels);
+    let rawData = [];
+    let charts = {};
+
+    $('#toggleSidebar').click(() => $('#sidebar').toggleClass('collapsed'));
+
+    // --- NOVA LÓGICA DE CARREGAMENTO DINÂMICO JSON ---
+    $(document).ready(function() {
+        // Substitua o nome do arquivo se necessário (ex: .json)
+        fetch('Planilha_Alfabetização.json')
+            .then(response => response.json())
+            .then(data => {
+                rawData = data;
+                const escolas = [...new Set(rawData.map(d => d.ESCOLA))].sort();
+                $('#filterEscola').html('<option value="all">Todas as Unidades</option>' + 
+                    escolas.map(e => `<option value="${e}">${e}</option>`).join(''));
+                $('#kpi-row').fadeIn();
+                updateAll();
+            })
+            .catch(error => {
+                console.error('Erro ao carregar base JSON:', error);
+                alert('Erro: A base de dados "Planilha_Alfabetização" não foi encontrada.');
+            });
+    });
+
+    function cleanNum(v) {
+        if (typeof v === 'string') v = v.replace('%', '').replace(',', '.').trim();
+        return isNaN(parseFloat(v)) ? 0 : parseFloat(v);
+    }
+
+    function updateAll() {
+        const escola = $('#filterEscola').val();
+        const data = escola === 'all' ? rawData : rawData.filter(d => d.ESCOLA === escola);
+        const anos = [...new Set(data.map(d => d.ANO))].sort((a,b) => b - a);
+        
+        const avg = data.reduce((a,b) => a + cleanNum(b.PERCENTUAL), 0) / data.length;
+        $('#kpi-media').text(Math.round(avg) + '%');
+        
+        const turmasUnicas = [...new Set(data.map(d => `${d.ESCOLA}-${d.TURMA}-${d.ANO}`))];
+        $('#kpi-turmas').text(turmasUnicas.length);
+
+        const metaTurmas = data.filter(d => cleanNum(d.PERCENTUAL) >= 90);
+        $('#kpi-meta').text(metaTurmas.length);
+
+        if(anos.length >= 2) {
+            const mAtual = data.filter(d => d.ANO == anos[0]).reduce((a,b) => a + cleanNum(b.PERCENTUAL), 0) / data.filter(d => d.ANO == anos[0]).length;
+            const mAnterior = data.filter(d => d.ANO == anos[1]).reduce((a,b) => a + cleanNum(b.PERCENTUAL), 0) / data.filter(d => d.ANO == anos[1]).length;
+            const diff = Math.round(mAtual - mAnterior);
+            if(diff === 0) {
+                $('#kpi-growth').html(`<span class="text-primary" style="font-size: 1.1rem;">Não houve variação</span>`);
+            } else {
+                $('#kpi-growth').html(`<span class="${diff > 0 ? 'text-success' : 'text-danger'}">${diff > 0 ? '↑' : '↓'} ${Math.abs(diff)}%</span>`);
+            }
+        } else { $('#kpi-growth').text('N/A'); }
+
+        let evolHtml = '';
+        for(let i=0; i < anos.length - 1; i++) {
+            const mF = data.filter(d => d.ANO == anos[i]).reduce((a,b)=>a+cleanNum(b.PERCENTUAL),0) / data.filter(d => d.ANO == anos[i]).length;
+            const mI = data.filter(d => d.ANO == anos[i+1]).reduce((a,b)=>a+cleanNum(b.PERCENTUAL),0) / data.filter(d => d.ANO == anos[i+1]).length;
+            const diff = Math.round(mF - mI);
+            let varText = diff === 0 ? 'Não houve variação' : (diff > 0 ? 'Melhoria' : 'Queda');
+            let pillClass = diff === 0 ? 'bg-stable' : (diff > 0 ? 'bg-up' : 'bg-down');
+            let iconClass = diff === 0 ? 'bi-dash-lg' : `bi-graph-${diff > 0 ? 'up' : 'down'}`;
+            
+            evolHtml += `<tr>
+                <td class="fw-bold">${anos[i+1]} → ${anos[i]}</td>
+                <td>${Math.round(mI)}%</td><td>${Math.round(mF)}%</td>
+                <td class="${diff === 0 ? 'text-primary' : (diff > 0 ? 'text-success' : 'text-danger')} fw-bold">
+                    ${diff === 0 ? '0%' : (diff > 0 ? '+' : '-') + Math.abs(diff) + '%'}
+                </td>
+                <td><span class="trend-pill ${pillClass}"><i class="bi ${iconClass}"></i> ${varText}</span></td>
+            </tr>`;
+        }
+        $('#listEvolucao').html(evolHtml);
+
+        let statsAnualHtml = '';
+        anos.forEach(a => {
+            const matches = data.filter(d => d.ANO == a);
+            const mediasAno = matches.map(m => cleanNum(m.PERCENTUAL));
+            statsAnualHtml += `<tr><td class="fw-bold">${a}</td><td class="text-center">${matches.filter(m => cleanNum(m.PERCENTUAL) >= 90).length}</td><td class="text-danger">${Math.round(Math.min(...mediasAno))}%</td><td class="text-success">${Math.round(Math.max(...mediasAno))}%</td></tr>`;
+        });
+        $('#tableStatsAnual').html(statsAnualHtml);
+
+        const todasMedias = data.map(d => cleanNum(d.PERCENTUAL));
+        $('#statsGeralBox').html(`<div class="mb-3 p-3 bg-light rounded"><p class="mb-1 small text-muted">MENOR MÉDIA</p><h4 class="text-danger fw-bold">${Math.round(Math.min(...todasMedias))}%</h4></div><div class="mb-3 p-3 bg-light rounded"><p class="mb-1 small text-muted">MAIOR MÉDIA</p><h4 class="text-success fw-bold">${Math.round(Math.max(...todasMedias))}%</h4></div><div class="p-3 border border-primary rounded" style="background: #f0f7ff"><p class="mb-1 small text-primary fw-bold">MÉDIA HISTÓRICA GLOBAL</p><h2 class="fw-bold mb-0">${Math.round(avg)}%</h2></div>`);
+
+        const metaSorted = metaTurmas.sort((a,b) => b.ANO - a.ANO);
+        let metaHtml = '';
+        metaSorted.forEach(t => { metaHtml += `<tr><td>${t.ESCOLA}</td><td>${t.TURMA}</td><td>${t.ANO}</td><td class="text-center fw-bold text-success">${Math.round(cleanNum(t.PERCENTUAL))}%</td></tr>`; });
+        $('#tableMeta90').html(metaHtml);
+
+        renderBarChart(data, [...anos].sort());
+    }
+
+    function renderBarChart(data, anosCronologicos) {
+        const barData = anosCronologicos.map(a => {
+            const matches = data.filter(d => d.ANO == a);
+            return (matches.reduce((a,b)=>a+cleanNum(b.PERCENTUAL),0)/matches.length).toFixed(2);
+        });
+        if(charts.esc) charts.esc.destroy();
+        const ctx = document.getElementById('chartEscolas').getContext('2d');
+        charts.esc = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: anosCronologicos, datasets: [{ data: barData, backgroundColor: '#3b82f6', borderRadius: 8, barThickness: 50 }] },
+            options: { 
+                animation: false,
+                maintainAspectRatio: false, 
+                plugins: { legend: { display: false }, datalabels: { color: '#fff', font: { weight: 'bold', size: 12 }, anchor: 'center', formatter: v => Math.round(v) + '%' } }, 
+                scales: { y: { max: 105, display: false }, x: { grid: { display: false } } } 
+            }
+        });
+    }
+
+    function showReportModal() {
+        if(rawData.length === 0) return alert("Aguarde o carregamento dos dados.");
+        const canvas = document.getElementById('chartEscolas');
+        const chartImg = canvas.toDataURL('image/png', 1.0);
+        const escola = $('#filterEscola option:selected').text();
+        const kpiMedia = $('#kpi-media').text();
+        const kpiTurmas = $('#kpi-turmas').text();
+        const kpiMeta = $('#kpi-meta').text();
+
+        let html = `
+            <div class="report-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="fw-bold mb-0">RELATÓRIO EXECUTIVO DE PERFORMANCE</h2>
+                    <p class="text-muted mb-0">Unidade: ${escola}</p>
+                </div>
+                <div class="text-end">
+                    <p class="small mb-0">Gerado em: ${new Date().toLocaleDateString()}</p>
+                </div>
+            </div>
+            <div class="row g-3 mb-4">
+                <div class="col-4"><div class="p-3 border rounded text-center"><strong>MÉDIA GERAL</strong><h3 style="color:#3b82f6">${kpiMedia}</h3></div></div>
+                <div class="col-4"><div class="p-3 border rounded text-center"><strong>TOTAL TURMAS</strong><h3>${kpiTurmas}</h3></div></div>
+                <div class="col-4"><div class="p-3 border rounded text-center"><strong>TURMAS NA META</strong><h3 style="color:#10b981">${kpiMeta}</h3></div></div>
+            </div>
+            <div class="mb-4 text-center">
+                <h5 class="fw-bold border-bottom pb-2 text-start">EVOLUÇÃO HISTÓRICA</h5>
+                <img src="${chartImg}" style="width: 100%; max-height: 350px; margin-top: 15px;">
+            </div>
+            <div class="mb-4">
+                <h5 class="fw-bold border-bottom pb-2">HISTÓRICO DE VARIAÇÃO</h5>
+                <table class="table table-sm table-bordered mt-2" style="font-size: 0.85rem;">${$('#tab-evolucao table').html()}</table>
+            </div>
+            <div class="mb-4">
+                <h5 class="fw-bold border-bottom pb-2">DETALHAMENTO TURMAS DE EXCELÊNCIA</h5>
+                <table class="table table-sm table-bordered mt-2" style="font-size: 0.85rem;">${$('#tab-meta table').html()}</table>
+            </div>
+        `;
+        $('#reportPreview').html(html);
+        new bootstrap.Modal('#modalReport').show();
+    }
+
+    function downloadConsolidatedPDF() {
+        const element = document.getElementById('reportPreview');
+        const escolaNome = $('#filterEscola').val().replace(/ /g, '_');
+        const opt = {
+            margin: 10,
+            filename: `Relatorio_Consolidado_${escolaNome}.pdf`,
+            image: { type: 'jpeg', quality: 1 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        html2pdf().from(element).set(opt).save();
+    }
+
+    $('#filterEscola').change(updateAll);
+</script>
+</body>
+</html>
