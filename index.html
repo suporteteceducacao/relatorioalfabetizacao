@@ -64,9 +64,6 @@
                 <select id="filterEscola" class="form-select form-select-custom shadow-none"></select>
             </div>
 
-            <!--<label class="small fw-bold mb-2 text-muted">BASE DE DADOS</label>
-            <div class="text-white-50 small mb-4"><i class="bi bi-database-check me-2"></i>Conectado: Planilha_Alfabetização</div>-->
-
             <button class="btn btn-primary w-100 fw-bold mt-4 py-2" onclick="showReportModal()">
                 <i class="bi bi-file-earmark-bar-graph me-2"></i>Relatório Executivo
             </button>
@@ -322,7 +319,6 @@
         renderBarChart(data, [...anos].sort());
     }
 
-    // MELHORIA APLICADA AQUI: Adição de animation:false e devicePixelRatio para PDF
     function renderBarChart(data, anosCronologicos) {
         const barData = anosCronologicos.map(a => {
             const matches = data.filter(d => d.ANO == a);
@@ -334,19 +330,19 @@
             type: 'bar',
             data: { labels: anosCronologicos, datasets: [{ data: barData, backgroundColor: '#3b82f6', borderRadius: 8, barThickness: 50 }] },
             options: { 
-                animation: false, // Essencial para capturar a imagem do gráfico sem atrasos
-                devicePixelRatio: 2, // Melhora a qualidade da imagem gerada para o PDF
+                animation: false, // Correção: Desativa animação para captura imediata
                 maintainAspectRatio: false, 
+                devicePixelRatio: 2, // Correção: Alta definição para o canvas
                 plugins: { legend: { display: false }, datalabels: { color: '#fff', font: { weight: 'bold', size: 12 }, anchor: 'center', formatter: v => Math.round(v) + '%' } }, 
                 scales: { y: { max: 105, display: false }, x: { grid: { display: false } } } 
             }
         });
     }
 
-    // MELHORIA APLICADA AQUI: Injeção robusta de imagem e delay de segurança
     async function showReportModal() {
         if(rawData.length === 0) return alert("Aguarde o carregamento dos dados.");
         
+        // Correção: Garante que o gráfico está renderizado antes de extrair a imagem
         const canvas = document.getElementById('chartEscolas');
         const chartImg = canvas.toDataURL('image/png', 1.0);
         
@@ -372,8 +368,8 @@
             </div>
             <div class="mb-4">
                 <h5 class="fw-bold border-bottom pb-2">EVOLUÇÃO HISTÓRICA</h5>
-                <div style="width:100%; text-align:center;">
-                    <img src="${chartImg}" style="width: 100%; height: auto; max-height: 300px; display: block; margin: 20px auto;">
+                <div style="width:100%; text-align:center; min-height: 250px;">
+                    <img id="imgReport" src="${chartImg}" style="width: 100%; height: auto; max-height: 300px; display: block; margin: 20px auto;">
                 </div>
             </div>
             <div class="mb-4">
@@ -387,10 +383,12 @@
         `;
         $('#reportPreview').html(html);
         
-        // Pequeno delay para garantir que o DOM processou a imagem antes de abrir o modal
+        // Correção: Delay de segurança para garantir a injeção da imagem no DOM
         setTimeout(() => {
-            new bootstrap.Modal('#modalReport').show();
-        }, 100);
+            const modalElement = document.getElementById('modalReport');
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        }, 150);
     }
 
     function downloadConsolidatedPDF() {
